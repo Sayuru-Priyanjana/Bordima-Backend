@@ -6,6 +6,7 @@ const cookieSession = require('cookie-session');
 require('./Auth/passport');
 
 const authOwners = require('./routers/AuthOwnersRouter');
+const placeRoute = require('./routers/PlaceRouter');
 
 const app = express();
 app.use(express.json());
@@ -20,6 +21,8 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use('/auth/owner', authOwners);
+app.use('/places/owner',placeRoute);
+
 
 app.listen(process.env.PORT, () => {
     console.log(`Server is listening on port ${process.env.PORT}`);
