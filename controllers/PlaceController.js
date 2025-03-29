@@ -50,44 +50,83 @@ exports.getPlace = async ({ params: { id } }, res)=>{
     }
 };
 
-
 exports.getFilteredPlaces = async (req, res) => {
     try {
-        const { id,gender, type, minRent, maxRent } = req.query;
+        const { id, gender, type, minRent, maxRent, lat, lng, radius } = req.query;
 
-        let query = 'SELECT * FROM places WHERE 1=1';
-        let values = [];
+        // Initialize query components
+        let selectClause = 'SELECT *';
+        let whereClause = ' FROM places WHERE 1=1';
+        let havingClause = '';
+        const values = [];
+        const whereValues = [];
+        let distanceValues = [];
+        let radiusValue = null;
 
-        if(id){
-            query += ' AND id = ?';
-            values.push(parseInt(id, 10));
+        // Location filter handling
+        const applyLocationFilter = lat && lng && radius;
+        if (applyLocationFilter) {
+            selectClause = `
+                SELECT *, 
+                (6371 * ACOS(
+                    COS(RADIANS(?)) * 
+                    COS(RADIANS(latitude)) * 
+                    COS(RADIANS(longitude) - RADIANS(?)) + 
+                    SIN(RADIANS(?)) * 
+                    SIN(RADIANS(latitude))
+                )) AS distance
+            `;
+            distanceValues = [
+                parseFloat(lat),
+                parseFloat(lng),
+                parseFloat(lat)
+            ];
+            havingClause = ' HAVING distance <= ?';
+            radiusValue = parseFloat(radius);
         }
 
+        
+        if (id) {
+            whereClause += ' AND id = ?';
+            whereValues.push(parseInt(id, 10));
+        }
         if (gender) {
-            query += ' AND gender = ?';
-            values.push(gender);
+            whereClause += ' AND gender = ?';
+            whereValues.push(gender);
         }
         if (type) {
-            query += ' AND type = ?';
-            values.push(type);
+            whereClause += ' AND type = ?';
+            whereValues.push(type);
         }
         if (minRent) {
-            query += ' AND rent >= ?';
-            values.push(parseFloat(minRent));
+            whereClause += ' AND rent >= ?';
+            whereValues.push(parseFloat(minRent));
         }
         if (maxRent) {
-            query += ' AND rent <= ?';
-            values.push(parseFloat(maxRent));
+            whereClause += ' AND rent <= ?';
+            whereValues.push(parseFloat(maxRent));
         }
 
-        const [rows] = await pool.query(query, values);
+        
+        let query = selectClause + whereClause + havingClause;
+        
+       
+        const allValues = [
+            ...distanceValues,
+            ...whereValues,
+            ...(applyLocationFilter ? [radiusValue] : [])
+        ];
 
+        
+        const [rows] = await pool.query(query, allValues);
         res.status(200).json(rows);
+
     } catch (err) {
         console.error('Error fetching places:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+
 
 exports.deletePlace = async (req, res) => {
     try {
@@ -114,6 +153,7 @@ exports.deletePlace = async (req, res) => {
 
 exports.updatePlace = async (req, res) => {
     try {
+
         const placeId = parseInt(req.query.id, 10);
         if (isNaN(placeId)) {
             return res.status(400).json({ message: 'Invalid place ID' });
