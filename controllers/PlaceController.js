@@ -88,3 +88,136 @@ exports.getFilteredPlaces = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+
+exports.deletePlace = async (req, res) => {
+    try {
+        
+        const placeId = parseInt(req.query.id, 10);
+        
+        if (isNaN(placeId)) {
+            return res.status(400).json({ message: 'Invalid ID' });
+        }
+
+        const sql = 'DELETE FROM places WHERE id = ?';
+        const [result] = await pool.query(sql, [placeId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Place not found' });
+        }
+
+        res.status(200).json({ message: 'Place deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting place:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+exports.updatePlace = async (req, res) => {
+    try {
+        const placeId = parseInt(req.query.id, 10);
+        if (isNaN(placeId)) {
+            return res.status(400).json({ message: 'Invalid place ID' });
+        }
+
+        const {
+            name,
+            latitude,
+            longitude,
+            rent,
+            images,
+            gender,
+            type,
+            rooms,
+            furniture,
+            members,
+            description,
+            contact,
+            views,
+            wishlist
+        } = req.query;
+
+        
+        let sql = 'UPDATE places SET ';
+        const values = [];
+
+        if (name) {
+            sql += 'name = ?, ';
+            values.push(name);
+        }
+        if (latitude) {
+            sql += 'latitude = ?, ';
+            values.push(parseFloat(latitude));
+        }
+        if (longitude) {
+            sql += 'longitude = ?, ';
+            values.push(parseFloat(longitude));
+        }
+        if (rent) {
+            sql += 'rent = ?, ';
+            values.push(parseFloat(rent));
+        }
+        if (images) {
+            sql += 'images = ?, ';
+            values.push(images); 
+        }
+        if (gender) {
+            sql += 'gender = ?, ';
+            values.push(gender);
+        }
+        if (type) {
+            sql += 'type = ?, ';
+            values.push(type);
+        }
+        if (rooms) {
+            sql += 'rooms = ?, ';
+            values.push(parseInt(rooms, 10));
+        }
+        if (furniture !== undefined) {
+            sql += 'furniture = ?, ';
+            values.push(furniture === 'true' || furniture === true);
+        }
+        if (members) {
+            sql += 'members = ?, ';
+            values.push(parseInt(members, 10));
+        }
+        if (description) {
+            sql += 'description = ?, ';
+            values.push(description);
+        }
+        if (contact) {
+            sql += 'contact = ?, ';
+            values.push(contact);
+        }
+        if (views) {
+            sql += 'views = ?, ';
+            values.push(parseInt(views, 10));
+        }
+        if (wishlist) {
+            sql += 'wishlist = ?, ';
+            values.push(parseInt(wishlist, 10));
+        }
+
+        
+        if (values.length === 0) {
+            return res.status(400).json({ message: 'No fields to update' });
+        }
+
+        
+        sql = sql.slice(0, -2) + ' WHERE id = ?';
+        values.push(placeId);
+
+        
+        const [result] = await pool.query(sql, values);
+
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Place not found or no changes made' });
+        }
+
+        res.status(200).json({ message: 'Place updated successfully' });
+    } catch (error) {
+        console.error('Error updating place:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+

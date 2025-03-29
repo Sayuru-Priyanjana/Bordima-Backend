@@ -10,10 +10,18 @@ require('dotenv').config();
 router.post('/add',PlaceController.addPlace);
 
 // get filtered data
-router.get('/places', PlaceController.getFilteredPlaces);
+router.get('/', PlaceController.getFilteredPlaces);
 
 // get single place
 router.get('/:id', PlaceController.getPlace);
+
+// delete place
+router.delete('/', PlaceController.deletePlace);
+
+// update place
+router.patch('/', PlaceController.updatePlace);
+
+
 
 
 
